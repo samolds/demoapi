@@ -4,6 +4,14 @@ A containerized RESTful HTTP microservice that stores user, group, and
 membership data.
 
 
+## About
+
+This is a small RESTful HTTP backend, written in Go, that manages simple
+`user`, `group`, and `membership` records. A `user` can belong to multiple
+`groups`, and a `group` can have multiple `users`. The many-to-many
+relationship is tracked by the `membership` record.
+
+
 ## Dependencies
 
 - Docker
@@ -20,6 +28,13 @@ OR
 make up
 curl http://localhost:8080/
 ```
+
+To cleanup local images:
+
+```
+make clean-docker
+```
+
 
 ## How To: from src (without Prometheus and Grafana servers)
 
