@@ -1,0 +1,78 @@
+///////////////////////////////////////////////////////////////////////////////
+// User - stores basic information for a user
+///////////////////////////////////////////////////////////////////////////////
+model user (
+  key    pk
+  unique uuid
+  unique id     // a user provided username that can be updated
+  
+  field pk      serial64
+  field uuid    text
+  field created utimestamp ( autoinsert )
+
+  field id         text ( updatable )
+  field first_name text ( updatable )
+  field last_name  text ( updatable )
+)
+
+create user ()
+delete user ( where user.id = ? )
+update user ( where user.id = ? )
+
+read one scalar ( select user, where user.id = ? )
+read paged ( select user )
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Group - information about a group that a user could belong to
+///////////////////////////////////////////////////////////////////////////////
+model group (
+  key    pk
+  unique uuid
+  unique name
+
+  field pk      serial64
+  field uuid    text
+  field created utimestamp ( autoinsert )
+
+  field name    text
+)
+
+create group ()
+delete group ( where group.name = ? )
+
+read one has scalar ( select group, where group.name = ? )
+read paged ( select group )
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Membership - joins users to groups
+///////////////////////////////////////////////////////////////////////////////
+model membership (
+  key    pk
+  unique user_pk group_pk
+
+  field pk      serial64
+  field created utimestamp ( autoinsert )
+
+  field user_pk  user.pk  cascade
+  field group_pk group.pk cascade
+)
+
+create membership ()
+delete membership ( join membership.user_pk = user.pk, where user.id= ? )
+delete membership ( join membership.group_pk = group.pk, where group.name = ? )
+
+read all (
+  select user
+  join user.pk = membership.user_pk
+  join membership.group_pk = group.pk
+  where group.name = ?
+)
+
+read all (
+  select group
+  join group.pk = membership.group_pk
+  join membership.user_pk = user.pk
+  where user.id = ?
+)
