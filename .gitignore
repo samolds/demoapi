@@ -1,0 +1,8 @@
+.env/*.secret.env
+
+go/pkg
+go/bin
+postgres/data
+go/src/demoapi/demoapi
+go/src/demoapi/vendor
+*.sqlite3.db*
