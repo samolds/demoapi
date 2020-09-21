@@ -4,6 +4,7 @@ services:
 
   api:
     container_name: demoapi_api
+    image: samolds/demoapi:latest
     build:
       dockerfile: Dockerfile
       context: ./go/src/demoapi

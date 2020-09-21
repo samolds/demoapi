@@ -4,22 +4,33 @@ A containerized RESTful HTTP microservice that stores user, group, and
 membership data.
 
 
-### Dependencies
+## Dependencies
 
 - Docker
 
 OR
 
-- Go 1.10+
+- Go 1.13+
 - Sqlite3
 
 
-### How To with Docker
+## How To: with Docker
 
 ```sh
 make up
 curl http://localhost:8080/
 ```
+
+## How To: from src (without Prometheus and Grafana servers)
+
+```sh
+cd go/src/demoapi
+make runsqlite3-no-generate
+curl http://localhost:8080/
+```
+
+
+## Dummy Data
 
 There is also a helper python script that will POST up a number of users and
 groups and create memberships so that there is dummy data available to poke.
@@ -32,12 +43,61 @@ python post_dummy_data.py
 ```
 
 
-### How To from src without Prometheus and Grafana servers
+### Example cURLs
 
+- Create a new user
 ```sh
-cd go/src/demoapi
-make runsqlite3-no-generate
-curl http://localhost:8080/
+curl -X POST --data-binary '{"first_name": "Matt", "last_name": "F", "userid": "mattf", "groups": ["nasa"]}' http://localhost:8080/users
+```
+
+- Get user data
+```sh
+curl http://localhost:8080/users/{userid}
+```
+
+- Update a specific user's memberships
+```sh
+curl -X PUT --data-binary '{"groups": ["group1", "group2"]}' http://localhost:8080/users/user1
+```
+
+- Delete user and their memberships
+```sh
+curl -X DELETE http://localhost:8080/users/{userid}
+```
+
+- Get all possible users, paged
+```sh
+curl http://localhost:8080/users?quantity=10&offset=10
+```
+
+- Create a new group
+```sh
+curl -X POST --data-binary '{"name": "group1"}' http://localhost:8080/groups
+```
+
+- Get group data
+```sh
+curl http://localhost:8080/groups/{groupname}
+```
+
+- Update a specific group's memberships
+```sh
+curl -X PUT --data-binary '{"userids": ["user1", "user2"]}' http://localhost:8080/groups/group1
+```
+
+- Delete group and its memberships
+```sh
+curl -X DELETE http://localhost:8080/groups/{groupname}
+```
+
+- Get all possible groups, paged
+```sh
+curl http://localhost:8080/groups?quantity=10&offset=10
+```
+
+If you have jq installed:
+```sh
+curl -s http://localhost:8080/users?limit=10&token=10 | jq
 ```
 
 
@@ -59,27 +119,6 @@ then an Authorization token must be provided with each request, like:
 
 ```
 curl -H "Authorization: Bearer dummy_token" http://localhost:8080/groups
-```
-
-
-### More example cURLs
-
-```sh
-curl http://localhost:8080/groups
-
-curl http://localhost:8080/groups?quantity=10&offset=10
-
-curl http://localhost:8080/users/{group_id}
-
-curl http://localhost:8080/users/{group_id}?quantity=10&offset=10
-
-curl -X POST --data-binary '{"first_name": "Matt", "last_name": "F", "userid": "mattf", "groups": ["nasa"]}' http://localhost:8080/users
-```
-
-If you have jq installed:
-
-```sh
-curl -s http://localhost:8080/users?limit=10&token=10 | jq
 ```
 
 

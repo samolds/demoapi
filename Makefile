@@ -4,7 +4,7 @@ build:
 	VERSION=$(VERSION) docker-compose build
 
 up:
-	docker-compose up
+	VERSION=$(VERSION) docker-compose up
 
 clean-docker: stop
 	-docker container rm -f demoapi_api demoapi_db demoapi_grafana demoapi_prometheus
