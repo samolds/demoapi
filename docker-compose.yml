@@ -12,7 +12,7 @@ services:
         VERSION: "${VERSION:-alpha}"
     env_file:
       - ./.env/db.env
-      - ./.env/db.secret.env
+      #- ./.env/db.secret.env
     ports:
       - "8080:8080"
     depends_on:
@@ -25,7 +25,7 @@ services:
     restart: always
     env_file:
       - ./.env/db.env
-      - ./.env/db.secret.env
+      #- ./.env/db.secret.env
     ports:
       - "5432:5432"
     volumes: # remove volume to not persist data between containerizations
