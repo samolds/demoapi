@@ -13,10 +13,10 @@ down:
 clean-docker: stop down
 	-docker container rm -f demoapi_api demoapi_db demoapi_grafana demoapi_prometheus
 	-docker image rm -f samolds/demoapi
-	-docker volume rm -f demoapi_postgres_data
 	-docker container prune -f
 	-docker image prune -f
 	-docker volume prune -f
+	-docker network prune -f
 	-rm -rf monitor/grafana monitor/grafana_data
 
 start:
