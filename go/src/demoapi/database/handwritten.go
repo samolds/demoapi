@@ -3,8 +3,11 @@ package database
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
+
+	monitor "demoapi/prometheus"
 )
 
 // This file contains any sql queries that are written by hand because they use
@@ -79,12 +82,14 @@ func (db *Database) DeleteMembershipNotListedForGroup(ctx context.Context,
 		optSuffix + ")"
 
 	stmt := db.Rebind(queryRaw) // cleans up sql as needed per driver (eg ?->$1)
-	logrus.Debugf("stmt: <%s>, values: <%v>", stmt, values)
+	Logger("stmt: <%s>, values: <%v>", stmt, values)
 
+	start := time.Now()
 	result, err := tx.Tx.ExecContext(ctx, stmt, values...)
 	if err != nil {
 		return 0, dbErr.Wrap(err)
 	}
+	monitor.DatabaseQueryLatencyHistogram.Observe(time.Now().Sub(start).Seconds())
 
 	removed, err := result.RowsAffected()
 	if err != nil {
@@ -129,12 +134,14 @@ func (db *Database) InsertOrIgnoreMembershipToGroup(ctx context.Context,
 	queryRaw := prefix + " memberships ( created, group_pk, user_pk ) " +
 		parameters + suffix
 	stmt := db.Rebind(queryRaw) // cleans up sql as needed per driver (eg ?->$1)
-	logrus.Debugf("stmt: <%s>, values: <%v>", stmt, values)
+	Logger("stmt: <%s>, values: <%v>", stmt, values)
 
+	start := time.Now()
 	result, err := tx.Tx.ExecContext(ctx, stmt, values...)
 	if err != nil {
 		return 0, dbErr.Wrap(err)
 	}
+	monitor.DatabaseQueryLatencyHistogram.Observe(time.Now().Sub(start).Seconds())
 
 	added, err := result.RowsAffected()
 	if err != nil {
@@ -209,12 +216,14 @@ func (db *Database) DeleteMembershipNotListedForUser(ctx context.Context,
 		optSuffix + ")"
 
 	stmt := db.Rebind(queryRaw) // cleans up sql as needed per driver (eg ?->$1)
-	logrus.Debugf("stmt: <%s>, values: <%v>", stmt, values)
+	Logger("stmt: <%s>, values: <%v>", stmt, values)
 
+	start := time.Now()
 	result, err := tx.Tx.ExecContext(ctx, stmt, values...)
 	if err != nil {
 		return 0, dbErr.Wrap(err)
 	}
+	monitor.DatabaseQueryLatencyHistogram.Observe(time.Now().Sub(start).Seconds())
 
 	removed, err := result.RowsAffected()
 	if err != nil {
@@ -259,12 +268,14 @@ func (db *Database) InsertOrIgnoreMembershipToUser(ctx context.Context,
 	queryRaw := prefix + " memberships ( created, user_pk, group_pk ) " +
 		parameters + suffix
 	stmt := db.Rebind(queryRaw) // cleans up sql as needed per driver (eg ?->$1)
-	logrus.Debugf("stmt: <%s>, values: <%v>", stmt, values)
+	Logger("stmt: <%s>, values: <%v>", stmt, values)
 
+	start := time.Now()
 	result, err := tx.Tx.ExecContext(ctx, stmt, values...)
 	if err != nil {
 		return 0, dbErr.Wrap(err)
 	}
+	monitor.DatabaseQueryLatencyHistogram.Observe(time.Now().Sub(start).Seconds())
 
 	added, err := result.RowsAffected()
 	if err != nil {

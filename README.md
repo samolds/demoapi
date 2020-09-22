@@ -122,6 +122,10 @@ curl -s http://localhost:8080/users?limit=10&token=10 | jq
   Will return paginated user objects with links to the next page
 - `GET /groups`
   Will return paginated group objects with links to the next page
+- `GET /metrics`
+  Will return Prometheus metrics that can be used by the Grafana server,
+  visible at [localhost:3000](http://localhost:3000). (See note below about
+  connecting the Prometheus server as a Grafana datasource)
 - An `insecure_requests_mode` flag that can be set in go/src/demoapi/config.hcl
   that toggles the need for an Authorization header with each request. For now,
   the token just needs to be any non-empty string.
@@ -137,6 +141,22 @@ curl -H "Authorization: Bearer dummy_token" http://localhost:8080/groups
 ```
 
 
-### TODOs
+### Using Grafana
 
-- grafana/prometheus
+```sh
+make up
+```
+
+This will spin off the main API server with Prometheus metric collection, as
+well as a Prometheus proxy server and a Grafana server. Once everything is up
+and running, go to [localhost:3000](http://localhost:3000). You should be
+greeted by the Grafana log in page. On first login, the creds are `admin` and
+`admin`.
+
+Once you're in, go to the [datasources](http://localhost:3000/datasources) tab,
+select "Prometheus" and enter `http://127.0.0.1:9090` as the "URL" and change
+"Access" to `Browser`. Then scroll down and test the connection.
+
+At this point, [Create a New Dashboard](http://localhost:3000/dashboard/new)
+and "Add a new panel". Once here, you should be able to start visualizing
+metrics collected for the API server.

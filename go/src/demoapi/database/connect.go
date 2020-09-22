@@ -6,6 +6,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/zeebo/errs"
+
+	monitor "demoapi/prometheus"
 )
 
 const (
@@ -34,6 +36,16 @@ type Config struct {
 func Connect(dbURL *url.URL, c *Config) (*Database, error) {
 	// WrapErr is a dbx specific error wrapping hook
 	WrapErr = StacktraceWrapAnyError
+
+	// Logger is a dbx specific logging hook. it's called by every dbx query
+	Logger = func(format string, args ...interface{}) {
+		logrus.Debugf(format, args...)
+
+		go func() {
+			// it is perhaps an abuse of this logger to collect metrics with it
+			monitor.DatabaseQueryCounter.Inc()
+		}()
+	}
 
 	// copy the dbURL and remove user/password so it's loggable
 	loggableURL, err := url.Parse(dbURL.String())
@@ -76,6 +88,9 @@ func Connect(dbURL *url.URL, c *Config) (*Database, error) {
 	// if err != nil {
 	//   return nil, err
 	// }
+
+	// TODO(sam): spin off a lightweight goroutine that will occasionally query
+	// the database for counts of various tables and Set monitor metrics
 
 	return db, nil
 }

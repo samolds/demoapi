@@ -12,6 +12,7 @@ import (
 
 	"demoapi/database"
 	he "demoapi/httperror"
+	monitor "demoapi/prometheus"
 	"demoapi/util"
 )
 
@@ -79,8 +80,12 @@ func (s *Server) CreateUser(ctx context.Context, w http.ResponseWriter,
 		database.User_FirstName(userJSON.FirstName),
 		database.User_LastName(userJSON.LastName))
 	if err != nil {
+		// TODO(sam): catch unique constaint violations and return
+		// 400 instead of 500
 		return nil, err
 	}
+
+	monitor.UserGauge.Inc()
 
 	// TODO(sam): do this transactionally with the previous query
 	if len(userJSON.Groups) > 0 {
@@ -92,6 +97,9 @@ func (s *Server) CreateUser(ctx context.Context, w http.ResponseWriter,
 
 		logrus.Debugf("memberships - added: %d, removed: %d, unchanged: %d", added,
 			removed, unchanged)
+
+		monitor.MembershipGauge.Add(float64(added))
+		monitor.MembershipGauge.Sub(float64(removed))
 	}
 
 	groups, err := s.DB.All_Group_By_User_Id(ctx, database.User_Id(user.Id))
@@ -124,6 +132,8 @@ func (s *Server) DeleteUser(ctx context.Context, w http.ResponseWriter,
 	if !deleted {
 		return nil, he.NotFound.New("userID %q doesn't exist", userID)
 	}
+
+	monitor.UserGauge.Dec()
 
 	return nil, nil
 }
@@ -196,6 +206,9 @@ func (s *Server) UpdateUser(ctx context.Context, w http.ResponseWriter,
 	logrus.Debugf("memberships - added: %d, removed: %d, unchanged: %d", added,
 		removed, unchanged)
 
+	monitor.MembershipGauge.Add(float64(added))
+	monitor.MembershipGauge.Sub(float64(removed))
+
 	groups, err := s.DB.All_Group_By_User_Id(ctx, database.User_Id(user.Id))
 	if err != nil {
 		return nil, err
@@ -264,8 +277,12 @@ func (s *Server) CreateGroup(ctx context.Context, w http.ResponseWriter,
 		database.Group_Uuid(util.MustUUID4()),
 		database.Group_Name(groupJSON.Name))
 	if err != nil {
+		// TODO(sam): catch unique constaint violations and return
+		// 400 instead of 500
 		return nil, err
 	}
+
+	monitor.GroupGauge.Inc()
 
 	resp := &RootJSON{
 		Group: apiGroup(group, nil),
@@ -304,6 +321,9 @@ func (s *Server) UpdateMembership(ctx context.Context, w http.ResponseWriter,
 	logrus.Debugf("memberships - added: %d, removed: %d, unchanged: %d", added,
 		removed, unchanged)
 
+	monitor.MembershipGauge.Add(float64(added))
+	monitor.MembershipGauge.Sub(float64(removed))
+
 	return nil, nil
 }
 
@@ -327,6 +347,8 @@ func (s *Server) DeleteGroup(ctx context.Context, w http.ResponseWriter,
 	if !deleted {
 		return nil, he.NotFound.New("groupName %q doesn't exist", groupName)
 	}
+
+	monitor.GroupGauge.Dec()
 
 	return nil, nil
 }

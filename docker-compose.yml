@@ -31,5 +31,26 @@ services:
     volumes: # remove volume to not persist data between containerizations
       - postgres_data:/var/lib/postgresql/data/
 
+  grafana:
+    container_name: demoapi_grafana
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./monitor/grafana_data:/var/lib/grafana
+      - ./monitor/grafana/provisioning/:/etc/grafana/provisioning/
+    restart: always
+
+  prometheus:
+    container_name: demoapi_prometheus
+    image: prom/prometheus:v2.1.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitor/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prom/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+
 volumes:
   postgres_data:

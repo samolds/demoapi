@@ -17,6 +17,7 @@ clean-docker: stop down
 	-docker container prune -f
 	-docker image prune -f
 	-docker volume prune -f
+	-rm -rf monitor/grafana monitor/grafana_data
 
 start:
 	docker-compose start

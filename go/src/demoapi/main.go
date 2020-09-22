@@ -5,12 +5,15 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
+	"github.com/zeebo/errs"
 
 	"demoapi/config"
-	"demoapi/database"
-	apiserver "demoapi/server"
+	"demoapi/prometheus"
+	api "demoapi/server"
 )
 
 //
@@ -22,57 +25,86 @@ var (
 )
 
 func main() {
-	// pulls in flag files, flag values, and environment variables
-	conf, err := config.Parse()
+	err := run()
 	if err != nil {
-		logrus.Fatalf("configuration error: %+v", err)
-	}
-
-	logrus.SetLevel(conf.LogLevel)
-	if err := run(context.Background(), conf); err != nil {
-		logrus.Fatalf("%+v", err)
+		logrus.Fatalf("demoapi: %+v", err)
 	}
 }
 
-func run(ctx context.Context, c *config.Configs) error {
-	// TODO(sam): pass through database configs
-	db, err := database.Connect(c.DBURL, nil)
+func run() error {
+	// pulls in flag files, flag values, and environment variables
+	conf, err := config.Parse()
+	if err != nil {
+		return errs.New("configuration error: %+v", err)
+	}
+
+	// set loglevel defined in config
+	logrus.SetLevel(conf.LogLevel)
+
+	// create a context that we can cancel
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// stay alive for all goroutines to finish
+	wg := sync.WaitGroup{}
+
+	// initialize the metric server
+	metricServer, metricMiddleware, err := prometheus.NewHTTPServer(conf)
 	if err != nil {
 		return err
 	}
 
-	logrus.Infof("starting demoapi version %q", version)
-	server := &http.Server{
-		Addr:         c.ServerAddr,
-		WriteTimeout: c.WriteTimeout,
-		ReadTimeout:  c.ReadTimeout,
-		IdleTimeout:  c.IdleTimeout,
-		Handler:      apiserver.New(db, c),
+	// initialize the api server
+	apiServer, err := api.NewHTTPServer(conf, metricMiddleware)
+	if err != nil {
+		return err
 	}
 
-	go func() {
-		logrus.Infof("waiting for connections on %s", c.ServerURL.String())
-		_ = server.ListenAndServe()
-		// ignoring the possible error here
-	}()
+	// service 1 - start the metric server
+	wg.Add(1)
+	go gracefullyServe(ctx, &wg, metricServer, conf.GracefulShutdownTimeout)
 
+	// service 2 - start the api server
+	logrus.Infof("starting demoapi version %q", version)
+	wg.Add(1)
+	go gracefullyServe(ctx, &wg, apiServer, conf.GracefulShutdownTimeout)
+
+	// listen for C-c interrupt
 	interruptWaiter := make(chan os.Signal, 1)
 	signal.Notify(interruptWaiter, os.Interrupt)
 	<-interruptWaiter // block until interrupt signal received
 
-	// set timeout incase something takes forever after interrupt
-	ctx, cancel := context.WithTimeout(ctx, c.GracefulShutdownTimeout)
+	cancel() // cancel context and let gracefullyServes spin down
+	wg.Wait()
+
+	logrus.Info("shut down")
+	return nil
+}
+
+func gracefullyServe(ctx context.Context, wg *sync.WaitGroup, s *http.Server,
+	shutdownTimeout time.Duration) {
+
+	defer wg.Done()
+	go func() {
+		// start the server
+		if err := s.ListenAndServe(); err != nil {
+			logrus.Errorf("%s", err)
+		}
+	}()
+
+	<-ctx.Done() // blocks until the context is cancelled
+	logrus.Info("shutting down...")
+
+	// set timeout with a new context (the last one has been canceled) incase
+	// something takes forever after interrupt
+	shutdownCtx, cancel := context.WithTimeout(context.Background(),
+		shutdownTimeout)
 	defer cancel()
 
 	go func() {
-		logrus.Infof("shutting down...")
-		_ = server.Shutdown(ctx)
-		// ignoring the possible error here
+		_ = s.Shutdown(shutdownCtx)
+		// ignore "Error shutting down server: context canceled"
 	}()
 
-	// wait for gracefull shutdown or canceled context
-	<-ctx.Done()
-
-	logrus.Infof("shut down")
-	return nil
+	logrus.Debug("server gracefully stopped")
 }

@@ -38,7 +38,6 @@ func newServerTest(t *testing.T) (context.Context, *serverTest) {
 	testDB, err := database.Connect(testDBURL, nil)
 	assert.NoError(t, err)
 	c := &config.Configs{
-		ServerURL:            nil,
 		InsecureRequestsMode: true,
 	}
 	return context.Background(), &serverTest{

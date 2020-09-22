@@ -56,3 +56,30 @@ func router(s *Server) http.Handler {
 	r.Mount("/", apiRoutes)
 	return r
 }
+
+// NewHTTPServer constructs a new http.Server to listen for connections and
+// serve responses as defined by the Server's ServeHTTP defined above.
+func NewHTTPServer(configs *config.Configs,
+	metricMiddleware h.MiddlewareWrapper) (*http.Server, error) {
+
+	// TODO(sam): pass through database configs
+	db, err := database.Connect(configs.DBURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var apiHandler http.Handler
+	apiHandler = New(db, configs)
+
+	if metricMiddleware != nil {
+		apiHandler = metricMiddleware(apiHandler)
+	}
+
+	return &http.Server{
+		Addr:         configs.APIAddress,
+		WriteTimeout: configs.WriteTimeout,
+		ReadTimeout:  configs.ReadTimeout,
+		IdleTimeout:  configs.IdleTimeout,
+		Handler:      apiHandler,
+	}, nil
+}

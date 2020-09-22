@@ -6,3 +6,6 @@ postgres/data
 go/src/demoapi/demoapi
 go/src/demoapi/vendor
 *.sqlite3.db*
+
+monitor/grafana
+monitor/grafana_data

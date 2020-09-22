@@ -8,8 +8,9 @@ require (
 	github.com/hashicorp/hcl v1.0.0
 	github.com/lib/pq v1.8.0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
+	github.com/prometheus/client_golang v1.7.1
 	github.com/sirupsen/logrus v1.6.0
-	github.com/stretchr/testify v1.2.2
+	github.com/stretchr/testify v1.4.0
 	github.com/zeebo/errs v1.2.2
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73 // indirect
 )

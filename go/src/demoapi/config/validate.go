@@ -36,8 +36,9 @@ var (
 
 type Configs struct {
 	DBURL                   *url.URL
-	ServerURL               *url.URL
-	ServerAddr              string
+	APISlug                 string
+	APIAddress              string
+	MetricAddress           string
 	GracefulShutdownTimeout time.Duration
 	WriteTimeout            time.Duration
 	ReadTimeout             time.Duration
@@ -75,7 +76,9 @@ func Parse() (*Configs, error) {
 
 type rawConfigs struct {
 	DBURL                   string `hcl:"db_url"`
-	ServerURL               string `hcl:"server_url"`
+	APISlug                 string `hcl:"api_slug"`
+	APIAddress              string `hcl:"api_addr"`
+	MetricAddress           string `hcl:"metric_addr"`
 	GracefulShutdownTimeout int    `hcl:"graceful_shutdown_timeout_sec"`
 	WriteTimeout            int    `hcl:"write_timeout_sec"`
 	ReadTimeout             int    `hcl:"read_timeout_sec"`
@@ -178,40 +181,36 @@ func (raw *rawConfigs) setNoChangeEnvVars() error {
 
 func (raw *rawConfigs) validate() (*Configs, error) {
 	if raw.DBURL == "" {
-		return nil, configErr.New("db_url unconfigured")
+		return nil, configErr.New("db_url misconfigured")
 	}
-	if raw.ServerURL == "" {
-		return nil, configErr.New("server_url unconfigured")
+	if raw.APISlug == "" {
+		return nil, configErr.New("api_slug misconfigured")
+	}
+	if raw.APIAddress == "" {
+		return nil, configErr.New("api_addr misconfigured")
+	}
+	if raw.MetricAddress == "" {
+		return nil, configErr.New("metric_addr misconfigured")
 	}
 	if raw.GracefulShutdownTimeout == 0 {
-		return nil, configErr.New("graceful_shutdown_timeout_sec unconfigured")
+		return nil, configErr.New("graceful_shutdown_timeout_sec misconfigured")
 	}
 	if raw.WriteTimeout == 0 {
-		return nil, configErr.New("write_sec unconfigured")
+		return nil, configErr.New("write_sec misconfigured")
 	}
 	if raw.ReadTimeout == 0 {
-		return nil, configErr.New("read_sec unconfigured")
+		return nil, configErr.New("read_sec misconfigured")
 	}
 	if raw.IdleTimeout == 0 {
-		return nil, configErr.New("idle_sec unconfigured")
+		return nil, configErr.New("idle_sec misconfigured")
 	}
 	if raw.LogLevel == "" {
-		return nil, configErr.New("loglevel unconfigured")
+		return nil, configErr.New("loglevel misconfigured")
 	}
 
 	dbURL, err := url.Parse(raw.DBURL)
 	if err != nil {
 		return nil, err
-	}
-
-	serverURL, err := url.Parse(raw.ServerURL)
-	if err != nil {
-		return nil, err
-	}
-
-	serverAddr := ":" + serverURL.Port()
-	if serverAddr == ":" {
-		return nil, configErr.New("server_url misconfigured. a port is necessary")
 	}
 
 	grace := time.Second * time.Duration(raw.GracefulShutdownTimeout)
@@ -226,8 +225,9 @@ func (raw *rawConfigs) validate() (*Configs, error) {
 
 	return &Configs{
 		DBURL:                   dbURL,
-		ServerURL:               serverURL,
-		ServerAddr:              serverAddr,
+		APISlug:                 raw.APISlug,
+		APIAddress:              raw.APIAddress,
+		MetricAddress:           raw.MetricAddress,
 		GracefulShutdownTimeout: grace,
 		WriteTimeout:            write,
 		ReadTimeout:             read,
